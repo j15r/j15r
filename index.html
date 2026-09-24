@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Japan-Reise · Reisetagebuch</title>
+  <meta name="description" content="Unser Reisetagebuch: drei Wochen Rundreise durch Japan.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%23c8412c'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Shippori+Mincho:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="#">
+        <span class="brand-mark" aria-hidden="true">旅</span>
+        <span class="brand-name" data-titel>Japan-Reise</span>
+      </a>
+      <nav class="nav" aria-label="Hauptnavigation">
+        <a href="#route">Route</a>
+        <a href="#tagebuch">Tagebuch</a>
+        <a href="#ueber">Über uns</a>
+      </nav>
+      <div class="clock" title="Aktuelle Uhrzeit in Japan">
+        <span class="clock-label">Japan</span>
+        <span class="clock-time" id="jp-clock">--:--</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div id="start-view">
+      <section class="hero">
+        <div class="wrap">
+          <p class="kicker">Reisetagebuch · <span id="hero-daten"></span></p>
+          <h1 data-titel>Japan-Reise</h1>
+          <p class="lead" id="hero-untertitel"></p>
+          <div class="status" id="status" aria-live="polite"></div>
+          <div class="trip-bar" id="trip-bar" aria-hidden="true"></div>
+        </div>
+      </section>
+
+      <section id="route" class="section">
+        <div class="wrap">
+          <div class="section-head">
+            <h2>Die Route</h2>
+            <p class="muted">Tippe auf eine Station, um die passenden Beiträge zu sehen.</p>
+          </div>
+          <div class="route-grid">
+            <div id="map" class="map" role="img" aria-label="Karte der Reiseroute"></div>
+            <ol class="timeline" id="timeline"></ol>
+          </div>
+        </div>
+      </section>
+
+      <section id="tagebuch" class="section">
+        <div class="wrap">
+          <div class="section-head">
+            <h2>Reisetagebuch</h2>
+          </div>
+          <div class="chips" id="filter" role="toolbar" aria-label="Beiträge nach Station filtern"></div>
+          <div class="posts" id="posts"></div>
+          <p class="empty muted" id="posts-empty" hidden></p>
+        </div>
+      </section>
+
+      <section id="ueber" class="section">
+        <div class="wrap narrow">
+          <h2>Über uns</h2>
+          <p id="ueber-text"></p>
+        </div>
+      </section>
+    </div>
+
+    <article id="post-view" class="post-view wrap narrow" hidden></article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>ありがとう · Danke fürs Mitlesen! <span class="muted">– <span id="footer-autoren"></span></span></p>
+    </div>
+  </footer>
+
+  <div class="lightbox" id="lightbox" hidden>
+    <button class="lightbox-close" aria-label="Schließen">×</button>
+    <img alt="">
+  </div>
+
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <script src="vendor/marked/marked.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
