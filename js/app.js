@@ -9,8 +9,16 @@
 
   /* ---------- Datum ---------- */
   const parseDate = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
-  const start = parseDate(R.start);
-  const totalDays = Math.max(...R.stationen.map((s) => s.bis));
+  const alleDaten = [
+    ...R.stationen.flatMap((s) => [s.von, s.bis]),
+    ...(R.fluege || []).map((f) => f.datum)
+  ].sort();
+  const start = parseDate(alleDaten[0]);
+  const dayNum = (iso) => Math.round((parseDate(iso) - start) / 86400000) + 1;
+  const totalDays = dayNum(alleDaten[alleDaten.length - 1]);
+  // Intern rechnen wir mit Reisetagen (Tag 1 = erster Reisetag)
+  const stationen = R.stationen.map((s) => ({ ...s, von: dayNum(s.von), bis: dayNum(s.bis) }));
+  const fluege = (R.fluege || []).map((f) => ({ ...f, tag: dayNum(f.datum) }));
   const dayDate = (n) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + n - 1);
   const fmt = (d, opts) => d.toLocaleDateString("de-DE", opts);
   const fmtShort = (d) => fmt(d, { day: "numeric", month: "short" });
@@ -18,9 +26,11 @@
 
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const tripDay = Math.round((today - start) / 86400000) + 1; // <1 vorher, >totalDays danach
-  const currentStation = R.stationen.find((s) => tripDay >= s.von && tripDay <= s.bis);
+  const currentStation = stationen.find((s) => tripDay >= s.von && tripDay <= s.bis);
+  const currentFlight = fluege.find((f) => f.tag === tripDay);
+  const flugName = (f) => `${f.von} → ${f.nach}`;
 
-  const stationById = Object.fromEntries(R.stationen.map((s, i) => [s.id, { ...s, nr: i + 1 }]));
+  const stationById = Object.fromEntries(stationen.map((s, i) => [s.id, { ...s, nr: i + 1 }]));
   const stationLabel = (id) => stationById[id]?.name ?? "Vorbereitung";
 
   /* ---------- Texte aus der Konfiguration ---------- */
@@ -33,8 +43,11 @@
 
   /* ---------- Ortszeit (Japan bzw. aktuelle Station) ---------- */
   const clock = $("#jp-clock");
-  const zeitzone = currentStation?.zeitzone ?? "Asia/Tokyo";
-  const ortName = zeitzone === "Asia/Tokyo" ? "Japan" : currentStation.name;
+  // Aktuelle Station, sonst die zuletzt besuchte (z. B. am Tag des Rückflugs)
+  const ortStation = tripDay > totalDays ? null
+    : currentStation ?? stationen.filter((s) => s.von <= tripDay).pop();
+  const zeitzone = ortStation?.zeitzone ?? "Asia/Tokyo";
+  const ortName = zeitzone === "Asia/Tokyo" ? "Japan" : ortStation.name;
   $(".clock-label").textContent = ortName;
   $(".clock").title = `Aktuelle Uhrzeit in ${ortName}`;
   const tick = () => {
@@ -51,23 +64,32 @@
   let statusHtml;
   if (tripDay < 1) {
     const d = 1 - tripDay;
-    statusHtml = stat(d, d === 1 ? "Tag bis zur Ankunft in Japan" : "Tage bis zur Ankunft in Japan") +
-      stat(totalDays, "Reisetage") + stat(R.stationen.length, "Stationen");
+    statusHtml = stat(d, d === 1 ? "Tag bis zum Abflug" : "Tage bis zum Abflug") +
+      stat(totalDays, "Reisetage") + stat(stationen.length, "Stationen");
   } else if (tripDay <= totalDays) {
     statusHtml = stat(`Tag ${tripDay}`, `von ${totalDays}`) +
-      stat(currentStation?.name ?? "unterwegs", "Hier sind wir gerade") +
-      stat(totalDays - tripDay, "Tage verbleibend");
+      (currentStation || !currentFlight
+        ? stat(currentStation?.name ?? "unterwegs", "Hier sind wir gerade")
+        : stat(`✈ ${currentFlight.nach}`, `Heute im Flieger ab ${currentFlight.von}`)) +
+      (tripDay === totalDays ? stat("Heimweg", "Letzter Reisetag")
+        : stat(totalDays - tripDay, totalDays - tripDay === 1 ? "Tag verbleibend" : "Tage verbleibend"));
   } else {
     statusHtml = stat("Zurück", "Wieder zu Hause") + stat(totalDays, "Reisetage") +
-      stat(R.stationen.length, "Stationen");
+      stat(stationen.length, "Stationen");
   }
   $("#status").innerHTML = statusHtml;
 
-  $("#trip-bar").innerHTML = R.stationen.map((s) => {
+  // Flugtage ohne eigene Station bekommen ein eigenes Segment
+  const flugSegmente = fluege
+    .filter((f) => !stationen.some((s) => f.tag >= s.von && f.tag <= s.bis))
+    .map((f) => ({ von: f.tag, bis: f.tag, name: `Flug ${flugName(f)}`, kanji: "✈", flug: true }));
+  const segmente = [...stationen, ...flugSegmente].sort((a, b) => a.von - b.von);
+
+  $("#trip-bar").innerHTML = segmente.map((s) => {
     const state = tripDay > s.bis ? "done" : tripDay >= s.von ? "now" : "";
     const days = s.bis - s.von + 1;
     const label = days >= 3 ? s.name : days === 2 ? s.name.split(/[ &]/)[0] : s.kanji;
-    return `<div class="trip-seg ${state}" style="flex:${days}" title="${esc(s.name)}"><span>${esc(label)}</span></div>`;
+    return `<div class="trip-seg ${state}${s.flug ? " flight" : ""}" style="flex:${days}" title="${esc(s.name)}"><span>${esc(label)}</span></div>`;
   }).join("");
 
   /* ---------- Zeitleiste ---------- */
@@ -77,7 +99,25 @@
     return `${tage} · ${datum}`;
   };
 
-  $("#timeline").innerHTML = R.stationen.map((s) => `
+  const flugHtml = (f) => `
+    <li class="flight-row${f === currentFlight ? " now" : ""}">
+      <span class="flight-icon" aria-hidden="true">✈</span>
+      <span>
+        <strong>${esc(flugName(f))}</strong>
+        <span class="stop-days">${esc(fmt(dayDate(f.tag), { weekday: "short", day: "numeric", month: "short" }))} · Tag ${f.tag}</span>
+        ${f.info ? `<span class="flight-info">${esc(f.info)}</span>` : ""}
+      </span>
+    </li>`;
+
+  // Stationen und Flüge nach Datum; am selben Tag kommt der Flug zuerst
+  const zeitleiste = [
+    ...stationen.map((s) => ({ tag: s.von, rang: 1, html: stationHtml(s) })),
+    ...fluege.map((f) => ({ tag: f.tag, rang: 0, html: flugHtml(f) }))
+  ].sort((a, b) => a.tag - b.tag || a.rang - b.rang);
+  $("#timeline").innerHTML = zeitleiste.map((e) => e.html).join("");
+
+  function stationHtml(s) {
+    return `
     <li>
       <button class="stop${s === currentStation ? " now" : ""}" data-station="${esc(s.id)}">
         <span class="stop-kanji" aria-hidden="true">${esc(s.kanji)}</span>
@@ -91,7 +131,8 @@
           ${s.ausfluege?.length ? `<p class="stop-extra">Ausflüge: ${esc(s.ausfluege.map((a) => a.name).join(", "))}</p>` : ""}
         </span>
       </button>
-    </li>`).join("");
+    </li>`;
+  }
 
   $("#timeline").addEventListener("click", (e) => {
     const btn = e.target.closest("[data-station]");
@@ -111,15 +152,15 @@
     }).addTo(map);
 
     // Landweg als gestrichelte Linie, Flüge zu Fernzielen dünn gepunktet
-    const pts = R.stationen.map((s) => [s.lat, s.lng]);
-    R.stationen.slice(1).forEach((s, i) => {
-      const flug = s.fernziel || R.stationen[i].fernziel;
+    const pts = stationen.map((s) => [s.lat, s.lng]);
+    stationen.slice(1).forEach((s, i) => {
+      const flug = s.fernziel || stationen[i].fernziel;
       L.polyline([pts[i], pts[i + 1]], flug
         ? { color: "#2f3e63", weight: 2, opacity: .6, dashArray: "2 8" }
         : { color: "#c8412c", weight: 3, opacity: .75, dashArray: "6 8" }).addTo(map);
     });
 
-    R.stationen.forEach((s) => (s.ausfluege || []).forEach((a) => {
+    stationen.forEach((s) => (s.ausfluege || []).forEach((a) => {
       L.polyline([[s.lat, s.lng], [a.lat, a.lng]], { color: "#c8412c", weight: 1.5, opacity: .45, dashArray: "2 6" }).addTo(map);
       L.marker([a.lat, a.lng], {
         icon: L.divIcon({ className: "", html: '<div class="map-dot"></div>', iconSize: [14, 14], iconAnchor: [7, 7] }),
@@ -127,14 +168,14 @@
       }).addTo(map).bindPopup(`<strong>${esc(a.name)}</strong><br><small>${esc(a.info || `Ausflug ab ${s.name}`)}</small>`);
     }));
 
-    R.stationen.forEach((s, i) => {
+    stationen.forEach((s, i) => {
       const icon = L.divIcon({ className: "", html: `<div class="map-pin">${i + 1}</div>`, iconSize: [28, 28], iconAnchor: [14, 14] });
       markers[s.id] = L.marker([s.lat, s.lng], { icon, title: s.name })
         .addTo(map)
         .bindPopup(`<strong>${esc(s.name)}</strong><br><small>${esc(daysText(s))}</small>`)
         .on("click", () => selectStation(s.id));
     });
-    homeBounds = L.latLngBounds(R.stationen.filter((s) => !s.fernziel)
+    homeBounds = L.latLngBounds(stationen.filter((s) => !s.fernziel)
       .flatMap((s) => [[s.lat, s.lng], ...(s.ausfluege || []).map((a) => [a.lat, a.lng])]));
     map.fitBounds(homeBounds, { padding: [30, 30] });
   } else {
@@ -200,7 +241,7 @@
     const used = new Set(posts.map((p) => p.station));
     const opts = [["alle", "Alle Beiträge"]];
     if (used.has("") || [...used].some((id) => !stationById[id])) opts.push(["", "Vorbereitung"]);
-    R.stationen.forEach((s) => used.has(s.id) && opts.push([s.id, s.name]));
+    stationen.forEach((s) => used.has(s.id) && opts.push([s.id, s.name]));
     if (activeFilter !== "alle" && !opts.some(([id]) => id === activeFilter)) {
       opts.push([activeFilter, stationLabel(activeFilter)]);
     }

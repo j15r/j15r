@@ -5,7 +5,7 @@ Er braucht keine Datenbank und kein Programmieren: Beiträge sind Textdateien, F
 
 **Das kann die Seite:**
 
-- Countdown bis zum Abflug, während der Reise „Tag X von 20“ und die aktuelle Station
+- Countdown bis zum Abflug, während der Reise „Tag X von 22“ und die aktuelle Station
 - Ortszeit in der Kopfzeile (Japan, in Singapur automatisch Singapur-Zeit)
 - Interaktive Karte mit der Route und eine Zeitleiste aller Stationen
 - Reisetagebuch mit Filter nach Station
@@ -30,8 +30,8 @@ bilder/             ← Fotos
 In `js/config.js` anpassen:
 
 - `titel`, `untertitel`, `autoren`, `ueberUns`
-- `start`: erster Reisetag, z. B. `"2026-10-04"`
-- `stationen`: die Route. `von`/`bis` sind Reisetage (Tag 1 = Startdatum).
+- `fluege`: alle Flüge mit Datum. Der erste Flug ist Tag 1, der letzte das Reiseende.
+- `stationen`: die Route. `von`/`bis` sind der erste und letzte Tag an der Station, z. B. `"2026-10-04"`.
   Die Koordinaten (`lat`/`lng`) findest du z. B. per Rechtsklick in Google Maps.
 
 ## 2. Neuen Beitrag schreiben

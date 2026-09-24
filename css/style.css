@@ -163,6 +163,17 @@ h2 { font-size: clamp(1.6rem, 3vw, 2.1rem); }
 .stop-days { font-size: .82rem; color: var(--muted); }
 .stop-info { margin: 4px 0 0; font-size: .92rem; color: var(--muted); line-height: 1.5; }
 .stop-extra { margin: 6px 0 0; font-size: .8rem; font-weight: 500; color: var(--accent); }
+.flight-row {
+  display: grid; grid-template-columns: 52px 1fr; gap: 14px; align-items: center;
+  padding: 2px 16px; font-size: .92rem;
+}
+.flight-row strong { margin-right: 8px; }
+.flight-icon {
+  display: grid; place-items: center; width: 52px; height: 32px;
+  color: var(--indigo); font-size: 1.1rem;
+}
+.flight-row.now .flight-icon { color: var(--accent); }
+.flight-info { display: block; font-size: .82rem; color: var(--muted); }
 .badge {
   display: inline-block; font-size: .7rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
   padding: 2px 8px; border-radius: 99px; background: var(--accent); color: var(--accent-ink);
