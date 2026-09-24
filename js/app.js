@@ -31,11 +31,15 @@
   $("#ueber-text").textContent = R.ueberUns;
   $("#footer-autoren").textContent = R.autoren;
 
-  /* ---------- Uhrzeit in Japan ---------- */
+  /* ---------- Ortszeit (Japan bzw. aktuelle Station) ---------- */
   const clock = $("#jp-clock");
+  const zeitzone = currentStation?.zeitzone ?? "Asia/Tokyo";
+  const ortName = zeitzone === "Asia/Tokyo" ? "Japan" : currentStation.name;
+  $(".clock-label").textContent = ortName;
+  $(".clock").title = `Aktuelle Uhrzeit in ${ortName}`;
   const tick = () => {
     clock.textContent = new Date().toLocaleTimeString("de-DE", {
-      timeZone: "Asia/Tokyo", hour: "2-digit", minute: "2-digit"
+      timeZone: zeitzone, hour: "2-digit", minute: "2-digit"
     });
   };
   tick(); setInterval(tick, 20000);
@@ -47,7 +51,7 @@
   let statusHtml;
   if (tripDay < 1) {
     const d = 1 - tripDay;
-    statusHtml = stat(d, d === 1 ? "Tag bis zum Abflug" : "Tage bis zum Abflug") +
+    statusHtml = stat(d, d === 1 ? "Tag bis zur Ankunft in Japan" : "Tage bis zur Ankunft in Japan") +
       stat(totalDays, "Reisetage") + stat(R.stationen.length, "Stationen");
   } else if (tripDay <= totalDays) {
     statusHtml = stat(`Tag ${tripDay}`, `von ${totalDays}`) +
@@ -84,6 +88,7 @@
             <span class="stop-days">${esc(daysText(s))}</span>
           </span>
           <p class="stop-info">${esc(s.info)}</p>
+          ${s.ausfluege?.length ? `<p class="stop-extra">Ausflüge: ${esc(s.ausfluege.map((a) => a.name).join(", "))}</p>` : ""}
         </span>
       </button>
     </li>`).join("");
@@ -96,6 +101,7 @@
 
   /* ---------- Karte ---------- */
   let map = null;
+  let homeBounds = null;
   const markers = {};
   if (window.L) {
     map = L.map("map", { scrollWheelZoom: false });
@@ -104,8 +110,22 @@
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
     }).addTo(map);
 
+    // Landweg als gestrichelte Linie, Flüge zu Fernzielen dünn gepunktet
     const pts = R.stationen.map((s) => [s.lat, s.lng]);
-    L.polyline(pts, { color: "#c8412c", weight: 3, opacity: .75, dashArray: "6 8" }).addTo(map);
+    R.stationen.slice(1).forEach((s, i) => {
+      const flug = s.fernziel || R.stationen[i].fernziel;
+      L.polyline([pts[i], pts[i + 1]], flug
+        ? { color: "#2f3e63", weight: 2, opacity: .6, dashArray: "2 8" }
+        : { color: "#c8412c", weight: 3, opacity: .75, dashArray: "6 8" }).addTo(map);
+    });
+
+    R.stationen.forEach((s) => (s.ausfluege || []).forEach((a) => {
+      L.polyline([[s.lat, s.lng], [a.lat, a.lng]], { color: "#c8412c", weight: 1.5, opacity: .45, dashArray: "2 6" }).addTo(map);
+      L.marker([a.lat, a.lng], {
+        icon: L.divIcon({ className: "", html: '<div class="map-dot"></div>', iconSize: [14, 14], iconAnchor: [7, 7] }),
+        title: a.name
+      }).addTo(map).bindPopup(`<strong>${esc(a.name)}</strong><br><small>${esc(a.info || `Ausflug ab ${s.name}`)}</small>`);
+    }));
 
     R.stationen.forEach((s, i) => {
       const icon = L.divIcon({ className: "", html: `<div class="map-pin">${i + 1}</div>`, iconSize: [28, 28], iconAnchor: [14, 14] });
@@ -114,7 +134,9 @@
         .bindPopup(`<strong>${esc(s.name)}</strong><br><small>${esc(daysText(s))}</small>`)
         .on("click", () => selectStation(s.id));
     });
-    map.fitBounds(pts, { padding: [30, 30] });
+    homeBounds = L.latLngBounds(R.stationen.filter((s) => !s.fernziel)
+      .flatMap((s) => [[s.lat, s.lng], ...(s.ausfluege || []).map((a) => [a.lat, a.lng])]));
+    map.fitBounds(homeBounds, { padding: [30, 30] });
   } else {
     $("#map").innerHTML = '<p class="muted" style="padding:20px">Die Karte konnte nicht geladen werden.</p>';
   }
@@ -223,7 +245,12 @@
       el.classList.toggle("active", el.dataset.station === activeFilter));
     Object.entries(markers).forEach(([sid, m]) =>
       m.getElement()?.firstChild?.classList.toggle("active", sid === activeFilter));
-    if (map && markers[activeFilter]) map.panTo(markers[activeFilter].getLatLng());
+    if (map && markers[activeFilter]) {
+      const s = stationById[activeFilter];
+      map.flyTo(markers[activeFilter].getLatLng(), s.fernziel ? 11 : Math.min(Math.max(map.getZoom(), 7), 9), { duration: .8 });
+    } else if (map && homeBounds) {
+      map.flyToBounds(homeBounds, { padding: [30, 30], duration: .8 });
+    }
     renderPosts();
     if (scrollToPosts) $("#tagebuch").scrollIntoView({ behavior: "smooth" });
   }

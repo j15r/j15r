@@ -1,6 +1,6 @@
 ---
 titel: Hier kommt der Titel hin
-datum: 2027-04-01
+datum: 2026-10-04
 station: tokio
 titelbild: bilder/tokio/titelbild.jpg
 teaser: Optional – ein Satz für die Übersicht. Ohne diese Zeile wird der erste Absatz verwendet.

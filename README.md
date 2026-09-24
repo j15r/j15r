@@ -1,12 +1,12 @@
 # 旅 Japan-Reiseblog
 
-Ein schlichter Reiseblog für Familie und Freunde für unsere dreiwöchige Rundreise durch Japan.
+Ein schlichter Reiseblog für Familie und Freunde für unsere Reise durch Japan und Singapur (4.–23. Oktober 2026).
 Er braucht keine Datenbank und kein Programmieren: Beiträge sind Textdateien, Fotos liegen in einem Ordner.
 
 **Das kann die Seite:**
 
-- Countdown bis zum Abflug, während der Reise „Tag X von 21“ und die aktuelle Station
-- Uhrzeit in Japan in der Kopfzeile
+- Countdown bis zum Abflug, während der Reise „Tag X von 20“ und die aktuelle Station
+- Ortszeit in der Kopfzeile (Japan, in Singapur automatisch Singapur-Zeit)
 - Interaktive Karte mit der Route und eine Zeitleiste aller Stationen
 - Reisetagebuch mit Filter nach Station
 - Fotos lassen sich per Klick groß anzeigen
@@ -30,18 +30,18 @@ bilder/             ← Fotos
 In `js/config.js` anpassen:
 
 - `titel`, `untertitel`, `autoren`, `ueberUns`
-- `start`: erster Reisetag, z. B. `"2027-04-01"`
+- `start`: erster Reisetag, z. B. `"2026-10-04"`
 - `stationen`: die Route. `von`/`bis` sind Reisetage (Tag 1 = Startdatum).
   Die Koordinaten (`lat`/`lng`) findest du z. B. per Rechtsklick in Google Maps.
 
 ## 2. Neuen Beitrag schreiben
 
-1. `posts/_VORLAGE.md` kopieren und umbenennen, z. B. `posts/2027-04-03-erster-tag-in-tokio.md`
+1. `posts/_VORLAGE.md` kopieren und umbenennen, z. B. `posts/2026-10-05-erster-tag-in-tokio.md`
 2. Oben Titel, Datum und Station eintragen:
    ```
    ---
    titel: Erster Tag in Tokio
-   datum: 2027-04-03
+   datum: 2026-10-05
    station: tokio
    titelbild: bilder/tokio/shibuya.jpg
    ---
@@ -51,7 +51,7 @@ In `js/config.js` anpassen:
 4. Den Dateinamen in `posts/index.json` ergänzen:
    ```json
    [
-     "2027-04-03-erster-tag-in-tokio.md",
+     "2026-10-05-erster-tag-in-tokio.md",
      "2026-09-24-bald-geht-es-los.md"
    ]
    ```
